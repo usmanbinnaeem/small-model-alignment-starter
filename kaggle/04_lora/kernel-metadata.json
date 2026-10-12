@@ -12,6 +12,8 @@
     "usmanbinnaeem/pa2-alignment-data"
   ],
   "competition_sources": [],
-  "kernel_sources": [],
+  "kernel_sources": [
+    "usmanbinnaeem/pa2-04-lora-dpo"
+  ],
   "model_sources": []
 }

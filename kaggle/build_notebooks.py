@@ -200,51 +200,78 @@ for r in json.load(open("outputs/gen/sanity/sft_best.json")):
     write_stage("01_sft", "pa2-01-sft", "PA2 01 SFT", cells)
 
 
-PERSONA_GEN = r"""
-# Persona eval set through the untuned SmolLM2 (cuda:1) and the LoRA-DPO merge (cuda:0), in parallel.
-common = ("--eval_set eval_sets/persona_style_eval_40.json --batch_size 20 --max_new_tokens 256 --chat_template")
-jobs = [
-    ("1", f"python -u scripts/generate.py --model HuggingFaceTB/SmolLM2-360M-Instruct --generator smollm2-360m-instruct "
-          f"--out outputs/gen_persona/smollm2_base.json {common}"),
-    ("0", f"python -u scripts/generate.py --model outputs/lora_dpo/merged --generator smollm2-360m-lora-dpo "
-          f"--out outputs/gen_persona/smollm2_lora_dpo.json {common}"),
+# Persona LoRA variants: (run folder, config, generation file stem). v1 is the first attempt; v2-v4 the sweep.
+LORA_VARIANTS = [
+    ("lora_dpo", "configs/lora_dpo.yaml", "smollm2_lora_dpo"),
+    ("lora_dpo_v2", "configs/lora_dpo_v2.yaml", "smollm2_lora_dpo_v2"),
+    ("lora_dpo_v3", "configs/lora_dpo_v3.yaml", "smollm2_lora_dpo_v3"),
+    ("lora_dpo_v4", "configs/lora_dpo_v4.yaml", "smollm2_lora_dpo_v4"),
 ]
+
+PERSONA_RUNS = r"""
+# Each variant trains (skipped if its summary.json exists), then answers the persona set (finished rows skipped).
+# GPU 1 also generates the untuned SmolLM2 baseline. Two chains run in parallel.
+VARIANTS = VARIANTS_HERE
+gen = ("--eval_set eval_sets/persona_style_eval_40.json --batch_size 20 --max_new_tokens 256 --chat_template")
+
+def variant_chain(run, config, stem):
+    return (f"mkdir -p outputs/{run} && python -u scripts/train_lora_dpo.py --config {config} >> outputs/{run}/train.log 2>&1 && "
+            f"python -u scripts/generate.py --model outputs/{run}/merged --generator smollm2-360m-{run.replace('_', '-')} "
+            f"--out outputs/gen_persona/{stem}.json {gen}")
+
+base_gen = (f"python -u scripts/generate.py --model HuggingFaceTB/SmolLM2-360M-Instruct --generator smollm2-360m-instruct "
+            f"--out outputs/gen_persona/smollm2_base.json {gen}")
+chains = {"0": [variant_chain(*v) for v in VARIANTS[0::2]], "1": [base_gen] + [variant_chain(*v) for v in VARIANTS[1::2]]}
 os.makedirs("outputs/gen_persona", exist_ok=True)
-procs = [subprocess.Popen(cmd, shell=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "PYTHONPATH": "."})
-         for gpu, cmd in jobs]
-print("exit codes", [p.wait() for p in procs])
+procs = {gpu: subprocess.Popen(" && ".join(cmds), shell=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "PYTHONPATH": "."},
+                               stdout=open(f"outputs/gen_persona/gpu{gpu}.log", "a"), stderr=subprocess.STDOUT)
+         for gpu, cmds in chains.items()}
+print("exit codes", {gpu: p.wait() for gpu, p in procs.items()})
+!tail -n 4 outputs/gen_persona/gpu0.log outputs/gen_persona/gpu1.log
+for run, _, _ in VARIANTS:
+    print(f"== {run}"); os.system(f"grep -E 'trainable|Traceback|Error' outputs/{run}/train.log | tail -3")
+"""
+
+PERSONA_REPORT = r"""
+import json
+for run, _, _ in VARIANTS:
+    os.system(f"PYTHONPATH=. python scripts/plot_metrics.py outputs/{run}")
+    s = json.load(open(f"outputs/{run}/summary.json"))
+    f = s["final_eval"]
+    print(f"{run:12s} steps={s['optimizer_steps']} eval_acc={f['eval_rewards/accuracies']:.3f} "
+          f"margin={f['eval_rewards/margins']:.3f} loss={f['eval_loss']:.3f}")
+outs = {stem: {r["id"]: r for r in json.load(open(f"outputs/gen_persona/{stem}.json"))} for stem in
+        ["smollm2_base"] + [v[2] for v in VARIANTS]}
+for stem, rows in outs.items():
+    n_len = sum(r["finish_reason"] == "length" for r in rows.values())
+    print(f"{stem:22s} hit_max_tokens={n_len:2d} mean_words={sum(len(r['output'].split()) for r in rows.values()) / len(rows):.0f}")
+for rid in list(outs["smollm2_base"])[::8]:
+    print("\n###", outs["smollm2_base"][rid]["category"], "|", outs["smollm2_base"][rid]["instruction"])
+    for stem, rows in outs.items():
+        print(f"  [{stem}]", rows[rid]["output"][:300].replace("\n", " "))
 """
 
 
 def build_lora() -> None:
+    variants = repr([list(v) for v in LORA_VARIANTS])
+    runs = [v[0] for v in LORA_VARIANTS]
     cells = [
         md("""
 # PA2 stage 04: persona LoRA-DPO with TRL (Task 5)
 
 `HuggingFaceTB/SmolLM2-360M-Instruct` + LoRA trained with TRL `DPOTrainer` on
-`data/persona_lora/ramsay_style_preferences.json` (200 train / 20 held out). Then the
-untuned and LoRA-DPO models answer the fixed 40-prompt persona style set.
+`data/persona_lora/ramsay_style_preferences.json` (200 train / 20 held out). v1 is the first
+configuration (over-optimised); v2-v4 lower the learning rate, add an SFT term on the chosen
+response, and raise beta. Every variant and the untuned model answer the fixed 40-prompt
+persona style set with identical greedy decoding.
 """),
         *setup_cells(extra_pip='"peft==0.21.2" "trl==1.15.0"'),
-        restore_cell(["lora_dpo", "gen_persona"]),
-        code("""
-!mkdir -p outputs/lora_dpo
-!CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python -u scripts/train_lora_dpo.py --config configs/lora_dpo.yaml 2>&1 | tee -a outputs/lora_dpo/train.log
-"""),
-        code(PERSONA_GEN),
-        code("""
-!PYTHONPATH=. python scripts/plot_metrics.py outputs/lora_dpo
-import json
-base = {r["id"]: r for r in json.load(open("outputs/gen_persona/smollm2_base.json"))}
-lora = {r["id"]: r for r in json.load(open("outputs/gen_persona/smollm2_lora_dpo.json"))}
-for rid in list(base)[::5]:
-    print("###", base[rid]["category"], "|", base[rid]["instruction"])
-    print("BASE:", base[rid]["output"][:400])
-    print("LORA:", lora[rid]["output"][:400], "\\n")
-"""),
-        code("""
-!cd outputs && zip -qr /kaggle/working/lora_dpo_run_outputs.zip lora_dpo gen_persona -x "lora_dpo/merged/*" "lora_dpo/trainer/*"
-!du -sh outputs/lora_dpo/* /kaggle/working/lora_dpo_run_outputs.zip
+        restore_cell([*runs, "gen_persona"]),
+        code(PERSONA_RUNS.replace("VARIANTS_HERE", variants)),
+        code(PERSONA_REPORT),
+        code(f"""
+!cd outputs && zip -qr /kaggle/working/lora_dpo_run_outputs.zip {" ".join(runs)} gen_persona -x "*/merged/*" "*/trainer/*"
+!du -sh outputs/lora_dpo* /kaggle/working/lora_dpo_run_outputs.zip
 """),
     ]
     write_stage("04_lora", "pa2-04-lora-dpo", "PA2 04 LoRA DPO", cells)

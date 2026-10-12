@@ -1,4 +1,4 @@
-# Task 5: persona DPO with TRL DPOTrainer + LoRA on SmolLM2-360M-Instruct.
+# Task 5 v1: persona DPO with TRL DPOTrainer + LoRA on SmolLM2-360M-Instruct (first attempt; over-optimized).
 model: HuggingFaceTB/SmolLM2-360M-Instruct
 data_path: data/persona_lora/ramsay_style_preferences.json
 out_dir: outputs/lora_dpo

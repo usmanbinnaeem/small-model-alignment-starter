@@ -37,6 +37,8 @@ DEFAULTS = {
     "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     "lr": 5e-5,
     "beta": 0.1,
+    "loss_type": ["sigmoid"],   # ["sigmoid", "sft"] adds an NLL term on the chosen response
+    "loss_weights": None,
     "batch_size": 4,
     "grad_accum": 2,
     "epochs": 3,
@@ -103,6 +105,8 @@ def main() -> None:
     args = DPOConfig(
         output_dir=str(out / "trainer"),
         beta=cfg["beta"],
+        loss_type=list(cfg["loss_type"]),
+        loss_weights=list(cfg["loss_weights"]) if cfg["loss_weights"] else None,
         learning_rate=cfg["lr"],
         lr_scheduler_type="cosine",
         warmup_ratio=cfg["warmup_ratio"],
