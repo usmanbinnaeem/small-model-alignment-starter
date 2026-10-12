@@ -55,7 +55,7 @@ for run in {run_dirs!r}:
 ''')
 
 
-def setup_cells(branch: str = "main") -> list[dict]:
+def setup_cells(branch: str = "main", extra_pip: str = "") -> list[dict]:
     return [
         code(f'''
 REPO_URL = "{REPO_URL}"
@@ -70,9 +70,9 @@ if not os.path.isdir(REPO_DIR):
 os.chdir(REPO_DIR)
 !git log -1 --format="%h %s"
 '''),
-        code('''
+        code(f'''
 !python -m pip uninstall -y -q torchao || true
-!python -m pip install -q "transformers>=4.43.0,<5" "datasets>=2.18,<5" huggingface_hub accelerate tqdm pyyaml sentencepiece safetensors pytest matplotlib
+!python -m pip install -q "transformers>=4.43.0,<5" "datasets>=2.18,<5" huggingface_hub accelerate tqdm pyyaml sentencepiece safetensors pytest matplotlib {extra_pip}
 !python -m pip install -q -e . --no-deps
 '''),
         code('''
@@ -200,8 +200,59 @@ for r in json.load(open("outputs/gen/sanity/sft_best.json")):
     write_stage("01_sft", "pa2-01-sft", "PA2 01 SFT", cells)
 
 
+PERSONA_GEN = r"""
+# Persona eval set through the untuned SmolLM2 (cuda:1) and the LoRA-DPO merge (cuda:0), in parallel.
+common = ("--eval_set eval_sets/persona_style_eval_40.json --batch_size 20 --max_new_tokens 256 --chat_template")
+jobs = [
+    ("1", f"python -u scripts/generate.py --model HuggingFaceTB/SmolLM2-360M-Instruct --generator smollm2-360m-instruct "
+          f"--out outputs/gen_persona/smollm2_base.json {common}"),
+    ("0", f"python -u scripts/generate.py --model outputs/lora_dpo/merged --generator smollm2-360m-lora-dpo "
+          f"--out outputs/gen_persona/smollm2_lora_dpo.json {common}"),
+]
+os.makedirs("outputs/gen_persona", exist_ok=True)
+procs = [subprocess.Popen(cmd, shell=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "PYTHONPATH": "."})
+         for gpu, cmd in jobs]
+print("exit codes", [p.wait() for p in procs])
+"""
+
+
+def build_lora() -> None:
+    cells = [
+        md("""
+# PA2 stage 04: persona LoRA-DPO with TRL (Task 5)
+
+`HuggingFaceTB/SmolLM2-360M-Instruct` + LoRA trained with TRL `DPOTrainer` on
+`data/persona_lora/ramsay_style_preferences.json` (200 train / 20 held out). Then the
+untuned and LoRA-DPO models answer the fixed 40-prompt persona style set.
+"""),
+        *setup_cells(extra_pip='"peft==0.21.2" "trl==1.15.0"'),
+        restore_cell(["lora_dpo", "gen_persona"]),
+        code("""
+!mkdir -p outputs/lora_dpo
+!CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python -u scripts/train_lora_dpo.py --config configs/lora_dpo.yaml 2>&1 | tee -a outputs/lora_dpo/train.log
+"""),
+        code(PERSONA_GEN),
+        code("""
+!PYTHONPATH=. python scripts/plot_metrics.py outputs/lora_dpo
+import json
+base = {r["id"]: r for r in json.load(open("outputs/gen_persona/smollm2_base.json"))}
+lora = {r["id"]: r for r in json.load(open("outputs/gen_persona/smollm2_lora_dpo.json"))}
+for rid in list(base)[::5]:
+    print("###", base[rid]["category"], "|", base[rid]["instruction"])
+    print("BASE:", base[rid]["output"][:400])
+    print("LORA:", lora[rid]["output"][:400], "\\n")
+"""),
+        code("""
+!cd outputs && zip -qr /kaggle/working/lora_dpo_run_outputs.zip lora_dpo gen_persona -x "lora_dpo/merged/*" "lora_dpo/trainer/*"
+!du -sh outputs/lora_dpo/* /kaggle/working/lora_dpo_run_outputs.zip
+"""),
+    ]
+    write_stage("04_lora", "pa2-04-lora-dpo", "PA2 04 LoRA DPO", cells)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
     RESUME.update(ap.parse_args().resume)
     build_sft()
+    build_lora()

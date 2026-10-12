@@ -3,7 +3,10 @@
     python scripts/generate.py --model outputs/sft/best --generator sft \
         --eval_set eval_sets/alpaca_eval_300_seed42.json --out outputs/gen/alpaca_sft.json
 
-Decoding is greedy by default, with the same prompt format used in training.
+Decoding is greedy by default, with the same prompt format used in training:
+the fixed ChatML prompt from ``smalign.prompts`` for the Qwen runs, or, with
+``--chat_template``, the model's own chat template (the persona LoRA task,
+where TRL formats training data with that template).
 The output file is rewritten after every batch, and rows already in it are
 skipped, so an interrupted run resumes where it stopped.
 """
@@ -44,6 +47,7 @@ def main() -> None:
     ap.add_argument("--repetition_penalty", type=float, default=1.0)
     ap.add_argument("--no_repeat_ngram_size", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--chat_template", action="store_true", help="format prompts with the tokenizer's chat template")
     args = ap.parse_args()
 
     rows = json.load(open(args.eval_set, encoding="utf-8"))[: args.limit]
@@ -70,14 +74,20 @@ def main() -> None:
         "eos_token_id": stop_ids,
         "pad_token_id": tokenizer.pad_token_id,
     }
-    (out.parent / f"{out.stem}.settings.json").write_text(json.dumps({"model": args.model, **settings}, indent=2))
+    prompt_format = "tokenizer chat template" if args.chat_template else "smalign.prompts.format_prompt (ChatML)"
+    (out.parent / f"{out.stem}.settings.json").write_text(
+        json.dumps({"model": args.model, "prompt_format": prompt_format, **settings}, indent=2))
 
     # Batch similar lengths together; output order follows the evaluation set.
     todo.sort(key=lambda r: len(r["instruction"]))
     for start in range(0, len(todo), args.batch_size):
         chunk = todo[start : start + args.batch_size]
-        enc = tokenizer([format_prompt(r["instruction"]) for r in chunk], return_tensors="pt",
-                        padding=True, add_special_tokens=False).to(device)
+        if args.chat_template:
+            texts = [tokenizer.apply_chat_template([{"role": "user", "content": r["instruction"]}],
+                                                   tokenize=False, add_generation_prompt=True) for r in chunk]
+        else:
+            texts = [format_prompt(r["instruction"]) for r in chunk]
+        enc = tokenizer(texts, return_tensors="pt", padding=True, add_special_tokens=False).to(device)
         with torch.no_grad():
             gen = model.generate(**enc, **{k: v for k, v in settings.items() if v or k == "do_sample"})
         new_tokens = gen[:, enc["input_ids"].shape[1] :]
