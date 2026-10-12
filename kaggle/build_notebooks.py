@@ -288,6 +288,77 @@ previous run's output is attached.
     write_stage(folder, slug, f"PA2 {folder[:2]} {title}", cells, kernel_sources=[f"{OWNER}/pa2-01-sft"])
 
 
+# One decoding policy for every model in a comparison (set from the stage-01 baseline evidence).
+DECODING = {"max_new_tokens": 512, "repetition_penalty": 1.0}
+
+FIND_EVAL_CKPTS = """
+import json
+
+def find_ckpt(run):
+    hits = sorted(glob.glob(f"/kaggle/input/**/small-model-alignment-starter/outputs/{run}/best/config.json", recursive=True))
+    assert hits, f"attach the stage output that contains outputs/{run}/best"
+    return os.path.dirname(hits[-1])
+
+CKPT = {"sft": find_ckpt("sft"), "dpo_hh": find_ckpt("dpo_hh"), "dpo_uf": find_ckpt("dpo_uf")}
+print(json.dumps(CKPT, indent=2))
+"""
+
+EVAL_GENERATION = """
+# GPU 0: SFT on both sets. GPU 1: each DPO model on its own set. Two processes in parallel.
+jobs = {
+    "0": [("sft", "alpaca_eval_300_seed42"), ("sft", "hh_rlhf_eval_300_seed42")],
+    "1": [("dpo_uf", "alpaca_eval_300_seed42"), ("dpo_hh", "hh_rlhf_eval_300_seed42")],
+}
+os.makedirs("outputs/gen_eval", exist_ok=True)
+procs = []
+for gpu, runs in jobs.items():
+    cmd = " && ".join(
+        f"python -u scripts/generate.py --model {CKPT[model]} --generator qwen2.5-0.5b-{model} "
+        f"--eval_set eval_sets/{evalset}.json --out outputs/gen_eval/{evalset}__{model}.json FLAGS"
+        for model, evalset in runs)
+    procs.append(subprocess.Popen(cmd, shell=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "PYTHONPATH": "."},
+                                  stdout=open(f"outputs/gen_eval/gpu{gpu}.log", "a"), stderr=subprocess.STDOUT))
+print("exit codes", [p.wait() for p in procs])
+!tail -n 3 outputs/gen_eval/gpu0.log outputs/gen_eval/gpu1.log
+"""
+
+BUILD_EVAL_PAIRS = """
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/alpaca_eval_300_seed42__sft.json --a_name sft \\\\
+    --b outputs/gen_eval/alpaca_eval_300_seed42__dpo_uf.json --b_name dpo_uf --out outputs/gen_eval/pairs_alpaca_dpo_uf_vs_sft.jsonl
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/hh_rlhf_eval_300_seed42__sft.json --a_name sft \\\\
+    --b outputs/gen_eval/hh_rlhf_eval_300_seed42__dpo_hh.json --b_name dpo_hh --out outputs/gen_eval/pairs_hh_dpo_hh_vs_sft.jsonl
+for f in sorted(glob.glob("outputs/gen_eval/*__*.json")):
+    rows = json.load(open(f))
+    n_len = sum(r["finish_reason"] == "length" for r in rows)
+    mean_words = sum(len(r["output"].split()) for r in rows) / len(rows)
+    print(f"{os.path.basename(f):45s} rows={len(rows)} hit_max_tokens={n_len} mean_words={mean_words:.0f}")
+"""
+
+
+def build_generate() -> None:
+    flags = f"--batch_size 32 --max_new_tokens {DECODING['max_new_tokens']} --repetition_penalty {DECODING['repetition_penalty']}"
+    cells = [
+        md(f"""
+# PA2 stage 05: evaluation generations and blind pair files (Task 6)
+
+SFT vs DPO-UltraFeedback on the fixed AlpacaEval subset (300 prompts, seed 42), and SFT vs
+DPO-HH on the provided helpful/harmless set (300 prompts). Same prompt format and decoding for
+every model: greedy, `{flags}`. Generation resumes per row; pair files are written before any judging.
+"""),
+        *setup_cells(),
+        code(FIND_EVAL_CKPTS),
+        restore_cell(["gen_eval"]),
+        code(EVAL_GENERATION.replace("FLAGS", flags)),
+        code(BUILD_EVAL_PAIRS),
+        code("""
+!cd outputs && zip -qr /kaggle/working/gen_eval_outputs.zip gen_eval
+!du -sh outputs/gen_eval /kaggle/working/gen_eval_outputs.zip
+"""),
+    ]
+    write_stage("05_generate", "pa2-05-generate", "PA2 05 Generate", cells,
+                kernel_sources=[f"{OWNER}/pa2-01-sft", f"{OWNER}/pa2-02-dpo-hh", f"{OWNER}/pa2-03-dpo-uf"])
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
@@ -298,3 +369,4 @@ if __name__ == "__main__":
     build_dpo("03_dpo_uf", "pa2-03-dpo-uf", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml",
               "15k UltraFeedback-binarized pairs (general helpfulness), validated on 1k held-out pairs.")
     build_lora()
+    build_generate()
