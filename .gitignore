@@ -1,2 +1,21 @@
 __pycache__/
 *.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+.ipynb_checkpoints/
+.DS_Store
+
+# Training artifacts stay on Kaggle / in output datasets, not in git
+outputs/
+downloads/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
+*.zip
+
+# Credentials
+.env
+kaggle.json
+access_token
