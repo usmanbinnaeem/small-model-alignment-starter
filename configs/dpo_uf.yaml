@@ -1,0 +1,22 @@
+# Task 4b: from-scratch DPO on UltraFeedback. Guide values from section 10.4.
+sft_checkpoint: outputs/sft/best
+train_path: data/prepared/uf_train.jsonl
+val_path: data/prepared/uf_val.jsonl
+out_dir: outputs/dpo_uf
+max_length: 512
+max_prompt_length: 256
+batch_size: 1
+grad_accum: 32          # effective batch 32
+eval_batch_size: 4
+lr: 1.0e-6              # fixed, no decay
+optimizer: adamw
+weight_decay: 0.0
+beta: 0.1
+max_grad_norm: 1.0
+epochs: 1
+eval_every: 50          # optimizer steps (~469 total)
+log_every: 5
+fp16: true
+reference_dtype: float32
+seed: 42
+time_limit_hours: 10.5

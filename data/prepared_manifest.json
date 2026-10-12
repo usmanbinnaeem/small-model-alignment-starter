@@ -1,0 +1,55 @@
+{
+  "tokenizer": "Qwen/Qwen2.5-0.5B",
+  "seed": 42,
+  "max_length": 512,
+  "max_prompt_length": 256,
+  "splits": {
+    "sft_train": {
+      "source": "HuggingFaceH4/ultrachat_200k:train_sft",
+      "rows_after_single_turn": 207843,
+      "rows_after_filters": 104795,
+      "sampled": 30000,
+      "filters": "formatted prompt <= 256 tokens and prompt + response + EOS <= 512"
+    },
+    "sft_val": {
+      "source": "HuggingFaceH4/ultrachat_200k:test_sft",
+      "rows_after_single_turn": 23108,
+      "rows_after_filters": 11680,
+      "sampled": 1000,
+      "filters": "formatted prompt <= 256 tokens and prompt + response + EOS <= 512"
+    },
+    "hh_train": {
+      "source": "Anthropic/hh-rlhf:train",
+      "rows_after_single_turn": 49241,
+      "rows_after_filters": 49029,
+      "sampled": 15000,
+      "filters": "single-turn, identical prompt, chosen != rejected; formatted prompt <= 256 tokens; responses truncated at 512 total"
+    },
+    "hh_val": {
+      "source": "Anthropic/hh-rlhf:test",
+      "rows_after_single_turn": 2597,
+      "rows_after_filters": 2585,
+      "sampled": 1000,
+      "filters": "single-turn, identical prompt, chosen != rejected; formatted prompt <= 256 tokens; responses truncated at 512 total"
+    },
+    "uf_train": {
+      "source": "HuggingFaceH4/ultrafeedback_binarized:train_prefs",
+      "rows_after_single_turn": 53344,
+      "rows_after_filters": 42861,
+      "sampled": 15000,
+      "filters": "score_chosen > score_rejected, chosen != rejected; formatted prompt <= 256 tokens; responses truncated at 512 total"
+    },
+    "uf_val": {
+      "source": "HuggingFaceH4/ultrafeedback_binarized:test_prefs",
+      "rows_after_single_turn": 1715,
+      "rows_after_filters": 1420,
+      "sampled": 1000,
+      "filters": "score_chosen > score_rejected, chosen != rejected; formatted prompt <= 256 tokens; responses truncated at 512 total"
+    }
+  },
+  "alpaca_eval": {
+    "source": "tatsu-lab/alpaca_eval:alpaca_eval.json",
+    "rule": "sorted(random.Random(42).sample(range(805), 300))",
+    "n": 300
+  }
+}

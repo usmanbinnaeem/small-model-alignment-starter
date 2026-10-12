@@ -19,3 +19,4 @@ checkpoints/
 .env
 kaggle.json
 access_token
+data/prepared/
