@@ -5,10 +5,20 @@
 Each stage folder gets a notebook and a ``kernel-metadata.json``; push one with
 ``kaggle kernels push -p kaggle/<stage>``. Stages attach the prepared-data
 dataset and, where needed, earlier stages' outputs as inputs.
+
+Resuming after a failed or timed-out run:
+
+    python kaggle/build_notebooks.py --resume 01_sft
+    kaggle kernels push -p kaggle/01_sft
+
+``--resume`` attaches the stage's own previous output. The notebook copies its
+run folders back from that input, training continues from the last saved step,
+finished runs are skipped, and generation skips rows already written.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -25,6 +35,24 @@ def md(text: str) -> dict:
 def code(text: str) -> dict:
     return {"cell_type": "code", "metadata": {}, "execution_count": None, "outputs": [],
             "source": text.strip("\n").splitlines(keepends=True)}
+
+
+def restore_cell(run_dirs: list[str]) -> dict:
+    return code(f'''
+# Resume support: copy this stage's run folders back from a previous run's attached output.
+import shutil
+for run in {run_dirs!r}:
+    local = os.path.join("outputs", run)
+    if os.path.exists(local):
+        continue
+    found = sorted(glob.glob(f"/kaggle/input/**/small-model-alignment-starter/outputs/{{run}}", recursive=True))
+    if found:
+        print(f"restoring outputs/{{run}} from {{found[-1]}}")
+        shutil.copytree(found[-1], local, symlinks=False)
+    else:
+        print(f"outputs/{{run}}: starting fresh")
+!du -sh outputs/* 2>/dev/null || true
+''')
 
 
 def setup_cells(branch: str = "main") -> list[dict]:
@@ -91,7 +119,12 @@ def metadata(slug: str, title: str, code_file: str, kernel_sources: list[str] | 
     }
 
 
+RESUME: set[str] = set()
+
+
 def write_stage(folder: str, slug: str, title: str, cells: list[dict], kernel_sources: list[str] | None = None) -> None:
+    if folder in RESUME:
+        kernel_sources = [*(kernel_sources or []), f"{OWNER}/{slug}"]
     out = HERE / folder
     out.mkdir(parents=True, exist_ok=True)
     nb = {
@@ -134,10 +167,11 @@ Trains Qwen2.5-0.5B on 30k UltraChat examples on `cuda:0` with the from-scratch 
 `/kaggle/working/small-model-alignment-starter/outputs/`.
 """),
         *setup_cells(),
+        restore_cell(["sft", "gen"]),
         code(BASELINE_RUNS),
         code('''
 !mkdir -p outputs/sft
-!CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python -u scripts/train_sft.py --config configs/sft.yaml 2>&1 | tee outputs/sft/train.log
+!CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. python -u scripts/train_sft.py --config configs/sft.yaml 2>&1 | tee -a outputs/sft/train.log
 '''),
         code('''
 print("waiting for baseline generation ...")
@@ -167,4 +201,7 @@ for r in json.load(open("outputs/gen/sanity/sft_best.json")):
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
+    RESUME.update(ap.parse_args().resume)
     build_sft()

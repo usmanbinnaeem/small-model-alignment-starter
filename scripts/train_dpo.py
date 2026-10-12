@@ -7,6 +7,10 @@ The policy and a frozen reference are both loaded from the SFT ``best``
 checkpoint. With two GPUs the policy trains on cuda:0 and the reference runs on
 cuda:1. Writes ``metrics.jsonl``, ``config.json``, ``summary.json``, and the
 ``best`` (highest validation reward accuracy) and ``final`` checkpoints.
+
+Resumable like ``train_sft.py``: the policy, optimizer, grad scaler, and data
+position are saved to ``out_dir/resume`` every ``save_every`` optimizer steps,
+and rerunning with the same ``out_dir`` continues from there.
 """
 
 from __future__ import annotations
@@ -25,11 +29,17 @@ from smalign.prompts import format_prompt
 from smalign.train_utils import (
     MetricsLog,
     autocast,
+    batch_order,
+    drop_resume,
+    find_resume,
     load_config,
+    load_resume,
     make_scaler,
     pick_device,
     save_checkpoint,
+    save_resume,
     set_seed,
+    trim_metrics,
 )
 
 DEFAULTS = {
@@ -49,6 +59,7 @@ DEFAULTS = {
     "max_grad_norm": 1.0,
     "epochs": 1,
     "eval_every": 50,
+    "save_every": 50,
     "log_every": 5,
     "fp16": True,
     "reference_dtype": "float32",
@@ -56,20 +67,24 @@ DEFAULTS = {
     "max_train": None,
     "max_val": None,
     "time_limit_hours": None,
+    "keep_resume": False,
 }
+
+
+def dpo_batch(chunk, tokenizer, cfg):
+    return batching.build_dpo_batch(
+        tokenizer,
+        [format_prompt(r["instruction"]) for r in chunk],
+        [r["chosen"] for r in chunk],
+        [r["rejected"] for r in chunk],
+        cfg["max_length"],
+        cfg["max_prompt_length"],
+    )
 
 
 def pair_batches(rows, tokenizer, cfg, batch_size):
     for i in range(0, len(rows), batch_size):
-        chunk = rows[i : i + batch_size]
-        yield batching.build_dpo_batch(
-            tokenizer,
-            [format_prompt(r["instruction"]) for r in chunk],
-            [r["chosen"] for r in chunk],
-            [r["rejected"] for r in chunk],
-            cfg["max_length"],
-            cfg["max_prompt_length"],
-        )
+        yield dpo_batch(rows[i : i + batch_size], tokenizer, cfg)
 
 
 def pair_logps(model, dpo_batch, pad_id, device, fp16):
@@ -115,15 +130,23 @@ def evaluate(policy, val_batches, ref_val, pad_id, device, cfg) -> dict:
 
 def main() -> None:
     cfg = load_config(DEFAULTS)
-    set_seed(cfg["seed"])
     out = Path(cfg["out_dir"])
     out.mkdir(parents=True, exist_ok=True)
+
+    summary_path = out / "summary.json"
+    if summary_path.exists() and not json.loads(summary_path.read_text()).get("stopped_early"):
+        print(f"{summary_path} says this run finished; nothing to do.")
+        return
+
+    set_seed(cfg["seed"])
     policy_device = pick_device(0)
     ref_device = pick_device(1)
+    resume = find_resume(out)
 
     tokenizer = AutoTokenizer.from_pretrained(cfg["sft_checkpoint"])
     pad_id = batching._pad_id(tokenizer)
-    policy = AutoModelForCausalLM.from_pretrained(cfg["sft_checkpoint"], torch_dtype=torch.float32).to(policy_device)
+    policy_path = resume / "model" if resume else cfg["sft_checkpoint"]
+    policy = AutoModelForCausalLM.from_pretrained(policy_path, torch_dtype=torch.float32).to(policy_device)
     reference = AutoModelForCausalLM.from_pretrained(
         cfg["sft_checkpoint"], torch_dtype=getattr(torch, cfg["reference_dtype"])
     ).to(ref_device)
@@ -135,7 +158,6 @@ def main() -> None:
 
     train_rows = read_jsonl(cfg["train_path"])[: cfg["max_train"]]
     val_rows = read_jsonl(cfg["val_path"])[: cfg["max_val"]]
-    order = torch.randperm(len(train_rows), generator=torch.Generator().manual_seed(cfg["seed"])).tolist()
 
     if cfg["optimizer"] == "rmsprop":
         optimizer = torch.optim.RMSprop(policy.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
@@ -144,11 +166,20 @@ def main() -> None:
                                       fused=policy_device.type == "cuda")
     scaler = make_scaler(policy_device, cfg["fp16"])
 
-    n_micro = math.ceil(len(train_rows) / cfg["batch_size"])
-    total_steps = math.ceil(n_micro / cfg["grad_accum"]) * cfg["epochs"]
+    micro_per_epoch = math.ceil(len(train_rows) / cfg["batch_size"])
+    total_steps = math.ceil(micro_per_epoch / cfg["grad_accum"]) * cfg["epochs"]
     cfg.update(n_train=len(train_rows), n_val=len(val_rows), optimizer_steps=total_steps,
                effective_batch_size=cfg["batch_size"] * cfg["grad_accum"],
                policy_device=str(policy_device), reference_device=str(ref_device), torch=torch.__version__)
+
+    pos = {"step": 0, "epoch": 0, "micro_in_epoch": 0}
+    best = {"val_reward_acc": -1.0, "val_reward_margin": -float("inf"), "step": -1}
+    if resume:
+        saved = load_resume(resume, optimizer, None, scaler)
+        pos, best = saved["pos"], saved["best"]
+        trim_metrics(out / "metrics.jsonl", pos["step"])
+        print(f"resumed from {resume} at step {pos['step']}/{total_steps}")
+        cfg.setdefault("resumed_at_steps", []).append(pos["step"])
     (out / "config.json").write_text(json.dumps(cfg, indent=2))
     print(json.dumps(cfg, indent=2))
 
@@ -160,7 +191,8 @@ def main() -> None:
     ]
 
     log = MetricsLog(out / "metrics.jsonl")
-    best = {"val_reward_acc": -1.0, "val_reward_margin": -float("inf"), "step": -1}
+    if resume:
+        log.write(kind="resume", step=pos["step"])
 
     def run_eval(step: int) -> None:
         stats = evaluate(policy, val_batches, ref_val, pad_id, policy_device, cfg)
@@ -168,25 +200,25 @@ def main() -> None:
         is_best = step > 0 and key > (best["val_reward_acc"], best["val_reward_margin"])
         log.write(kind="eval", step=step, **stats, is_best=is_best)
         print(f"[eval] step {step}/{total_steps} loss {stats['val_loss']:.4f} acc {stats['val_reward_acc']:.3f} "
-              f"margin {stats['val_reward_margin']:.4f}" + (" *best*" if is_best else ""))
+              f"margin {stats['val_reward_margin']:.4f}" + (" *best*" if is_best else ""), flush=True)
         if is_best:
             best.update(val_reward_acc=stats["val_reward_acc"], val_reward_margin=stats["val_reward_margin"], step=step)
             save_checkpoint(policy, tokenizer, out / "best", {"step": step, "reference": cfg["sft_checkpoint"], **stats})
 
-    run_eval(0)
+    if not resume:
+        run_eval(0)
     deadline = time.time() + cfg["time_limit_hours"] * 3600 if cfg["time_limit_hours"] else None
-    step, micro, stopped_early = 0, 0, False
+    stopped_early = False
     window = {"loss": 0.0, "acc": 0.0, "margin": 0.0, "chosen": 0.0, "rejected": 0.0, "pairs": 0}
     optimizer.zero_grad(set_to_none=True)
 
-    for epoch in range(cfg["epochs"]):
-        epoch_rows = [train_rows[i] for i in order] if epoch == 0 else [
-            train_rows[i] for i in torch.randperm(len(train_rows), generator=torch.Generator().manual_seed(cfg["seed"] + epoch)).tolist()
-        ]
-        for dpo_batch in pair_batches(epoch_rows, tokenizer, cfg, cfg["batch_size"]):
+    while pos["epoch"] < cfg["epochs"] and not stopped_early:
+        batches = batch_order(len(train_rows), cfg["batch_size"], cfg["seed"], pos["epoch"])
+        for idx in batches[pos["micro_in_epoch"] :]:
+            pairs = dpo_batch([train_rows[i] for i in idx], tokenizer, cfg)
             # Launch the reference first: CUDA runs it on cuda:1 while the policy runs on cuda:0.
-            ref_c, ref_r = reference_pair_logps(reference, dpo_batch, pad_id, ref_device, cfg["fp16"])
-            pol_c, pol_r = pair_logps(policy, dpo_batch, pad_id, policy_device, cfg["fp16"])
+            ref_c, ref_r = reference_pair_logps(reference, pairs, pad_id, ref_device, cfg["fp16"])
+            pol_c, pol_r = pair_logps(policy, pairs, pad_id, policy_device, cfg["fp16"])
             loss, stats = losses.dpo_loss_from_logps(pol_c, pol_r, ref_c, ref_r, cfg["beta"])
             scaler.scale(loss / cfg["grad_accum"]).backward()
 
@@ -197,8 +229,9 @@ def main() -> None:
             window["chosen"] += stats["chosen_rewards"].sum().item()
             window["rejected"] += stats["rejected_rewards"].sum().item()
             window["pairs"] += k
-            micro += 1
-            if micro % cfg["grad_accum"] and micro != n_micro * (epoch + 1):
+            pos["micro_in_epoch"] += 1
+            end_of_epoch = pos["micro_in_epoch"] == micro_per_epoch
+            if pos["micro_in_epoch"] % cfg["grad_accum"] and not end_of_epoch:
                 continue
 
             scaler.unscale_(optimizer)
@@ -206,36 +239,46 @@ def main() -> None:
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad(set_to_none=True)
-            step += 1
+            pos["step"] += 1
+            step = pos["step"]
+            if end_of_epoch:
+                pos["epoch"] += 1
+                pos["micro_in_epoch"] = 0
 
             if step % cfg["log_every"] == 0 or step == total_steps:
                 p = window["pairs"]
-                log.write(kind="train", step=step, epoch=epoch, train_loss=window["loss"] / p,
+                log.write(kind="train", step=step, epoch=pos["epoch"], train_loss=window["loss"] / p,
                           train_reward_acc=window["acc"] / p, train_reward_margin=window["margin"] / p,
                           train_chosen_reward=window["chosen"] / p, train_rejected_reward=window["rejected"] / p,
                           grad_norm=float(grad_norm), lr=optimizer.param_groups[0]["lr"],
                           loss_scale=scaler.get_scale() if scaler.is_enabled() else 1.0)
                 print(f"step {step}/{total_steps} loss {window['loss'] / p:.4f} acc {window['acc'] / p:.3f} "
-                      f"margin {window['margin'] / p:.4f} gnorm {float(grad_norm):.2f}")
+                      f"margin {window['margin'] / p:.4f} gnorm {float(grad_norm):.2f}", flush=True)
                 window = dict.fromkeys(window, 0.0)
                 window["pairs"] = 0
 
             if step % cfg["eval_every"] == 0 or step == total_steps:
                 run_eval(step)
-            if deadline and time.time() > deadline:
-                print("time limit reached, stopping")
+            out_of_time = deadline is not None and time.time() > deadline and step != total_steps
+            if (step % cfg["save_every"] == 0 or out_of_time) and step != total_steps:
+                save_resume(out, policy, optimizer, None, scaler, {"pos": pos, "best": best})
+                print(f"[resume] saved at step {step}", flush=True)
+            if out_of_time:
+                print("time limit reached; rerun to continue from the saved step")
                 stopped_early = True
                 break
-        if stopped_early:
-            break
 
-    if step % cfg["eval_every"] and step != total_steps:
-        run_eval(step)
-    save_checkpoint(policy, tokenizer, out / "final", {"step": step, "reference": cfg["sft_checkpoint"]})
+    step = pos["step"]
+    if not stopped_early:
+        if step % cfg["eval_every"] and step != total_steps:
+            run_eval(step)
+        save_checkpoint(policy, tokenizer, out / "final", {"step": step, "reference": cfg["sft_checkpoint"]})
+        if not cfg["keep_resume"]:
+            drop_resume(out)
     summary = {"best_step": best["step"], "best_val_reward_acc": best["val_reward_acc"],
                "best_val_reward_margin": best["val_reward_margin"], "final_step": step,
                "total_steps": total_steps, "stopped_early": stopped_early}
-    (out / "summary.json").write_text(json.dumps(summary, indent=2))
+    summary_path.write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
 
 
