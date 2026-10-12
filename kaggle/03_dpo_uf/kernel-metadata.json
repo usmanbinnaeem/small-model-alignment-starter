@@ -1,0 +1,19 @@
+{
+  "id": "usmanbinnaeem/pa2-03-dpo-uf",
+  "title": "PA2 03 DPO UltraFeedback",
+  "code_file": "dpo_uf.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "dataset_sources": [
+    "usmanbinnaeem/pa2-alignment-data"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "usmanbinnaeem/pa2-01-sft"
+  ],
+  "model_sources": []
+}

@@ -1,0 +1,19 @@
+{
+  "id": "usmanbinnaeem/pa2-02-dpo-hh",
+  "title": "PA2 02 DPO HH-RLHF",
+  "code_file": "dpo_hh.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "machine_shape": "NvidiaTeslaT4",
+  "enable_internet": true,
+  "dataset_sources": [
+    "usmanbinnaeem/pa2-alignment-data"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [
+    "usmanbinnaeem/pa2-01-sft"
+  ],
+  "model_sources": []
+}

@@ -250,9 +250,51 @@ for rid in list(base)[::5]:
     write_stage("04_lora", "pa2-04-lora-dpo", "PA2 04 LoRA DPO", cells)
 
 
+FIND_SFT = """
+# The SFT stage's output is attached as an input; use its best checkpoint as policy init and reference.
+hits = sorted(glob.glob("/kaggle/input/**/small-model-alignment-starter/outputs/sft/best/config.json", recursive=True))
+assert hits, "attach the pa2-01-sft notebook output"
+SFT_BEST = os.path.dirname(hits[-1])
+print("SFT best checkpoint:", SFT_BEST)
+!cat {SFT_BEST}/checkpoint_info.json
+"""
+
+
+def build_dpo(folder: str, slug: str, title: str, run: str, config: str, blurb: str) -> None:
+    cells = [
+        md(f"""
+# PA2 stage {folder[:2]}: {title} (Task 4)
+
+{blurb} From-scratch DPO (`scripts/train_dpo.py`): policy on `cuda:0`, frozen reference on
+`cuda:1`, both from the SFT `best` checkpoint. Resumes from `outputs/{run}/resume` when a
+previous run's output is attached.
+"""),
+        *setup_cells(),
+        code(FIND_SFT),
+        restore_cell([run]),
+        code(f"""
+!mkdir -p outputs/{run}
+!PYTHONPATH=. python -u scripts/train_dpo.py --config {config} --sft_checkpoint {{SFT_BEST}} 2>&1 | tee -a outputs/{run}/train.log
+"""),
+        code(f"""
+!PYTHONPATH=. python scripts/plot_metrics.py outputs/{run}
+!cat outputs/{run}/summary.json
+"""),
+        code(f"""
+!cd outputs && zip -qr /kaggle/working/{run}_run_outputs.zip {run} -x "{run}/best/*" "{run}/final/*" "{run}/resume/*"
+!du -sh outputs/{run}/* /kaggle/working/{run}_run_outputs.zip
+"""),
+    ]
+    write_stage(folder, slug, f"PA2 {folder[:2]} {title}", cells, kernel_sources=[f"{OWNER}/pa2-01-sft"])
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
     RESUME.update(ap.parse_args().resume)
     build_sft()
+    build_dpo("02_dpo_hh", "pa2-02-dpo-hh", "DPO HH-RLHF", "dpo_hh", "configs/dpo_hh.yaml",
+              "15k single-turn Anthropic HH-RLHF pairs (helpful/harmless), validated on 1k held-out pairs.")
+    build_dpo("03_dpo_uf", "pa2-03-dpo-uf", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml",
+              "15k UltraFeedback-binarized pairs (general helpfulness), validated on 1k held-out pairs.")
     build_lora()
