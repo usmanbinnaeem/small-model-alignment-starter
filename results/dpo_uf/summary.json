@@ -1,0 +1,8 @@
+{
+  "best_step": 400,
+  "best_val_reward_acc": 0.743,
+  "best_val_reward_margin": 0.6739564137384295,
+  "final_step": 469,
+  "total_steps": 469,
+  "stopped_early": false
+}

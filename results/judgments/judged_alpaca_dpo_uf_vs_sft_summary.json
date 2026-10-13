@@ -1,0 +1,28 @@
+{
+  "judge_model": "google/gemini-3.6-flash",
+  "mode": "general",
+  "candidate": "dpo_uf",
+  "baseline": "sft",
+  "n_pairs": 300,
+  "n_judged": 300,
+  "n_failed": 0,
+  "failure_rate": 0.0,
+  "total_attempts": 317,
+  "verdict": {
+    "wins": 114,
+    "losses": 141,
+    "ties": 45,
+    "unknown": 0,
+    "failures": 0,
+    "win_rate_excluding_ties": 0.4470588235294118,
+    "win_rate_ties_half": 0.455,
+    "rates_over_all_pairs": {
+      "win": 0.38,
+      "loss": 0.47,
+      "tie": 0.15,
+      "unknown": 0.0,
+      "failure": 0.0
+    },
+    "by_category": {}
+  }
+}

@@ -137,8 +137,8 @@ greedy decoding. The fp16 loss scale never dropped below $2^{16}$, so no steps w
 \centering
 \includegraphics[width=\linewidth]{figures/dpo_curves.png}
 \caption{DPO loss, reward accuracy ($r_w > r_l$, strict), and reward margin. Training metrics every 5 steps (light) and
-EMA 0.8 (dark); validation on 1,000 held-out pairs every 50 steps (dashed). Circle: selected checkpoint.
-\pending{add the UltraFeedback run to this figure}}
+EMA 0.8 (dark); validation on 1,000 held-out pairs every 50 steps (dashed). Blue: HH, orange: UltraFeedback.
+Circles: selected checkpoints (HH step 469, UF step 400).}
 \end{figure}
 
 \textbf{HH DPO} ran 469 steps in 1.0 hour. Validation reward accuracy went from 0 (exact tie at step 0) to 0.586 at step
@@ -147,8 +147,12 @@ implicit rewards became negative (chosen $-0.35$, rejected $-0.57$ at the end): 
 responses, rejected more than chosen. The curves were still improving at the last step, so one epoch at 1e-6 is likely
 under-trained; the best checkpoint is the final one.
 
-\textbf{UF DPO.} \pending{steps, time, accuracy and margin trajectory, best step}. At step 50, before the OOM was
-fixed and after, validation accuracy was 0.715 with margin 0.33, already above HH at the same step.
+\textbf{UF DPO} ran 469 steps in 1.6 hours (after the restart described in Section 3). It learned much more than HH:
+validation accuracy reached 0.715 by step 50 and peaked at 0.743 at step 400 (the selected checkpoint), the margin grew
+from 0.33 to 0.70, and the loss fell to 0.537. Almost all of the margin came from pushing the rejected response down
+(rejected reward $-0.83$ at the end) while the chosen reward stayed near zero ($-0.12$). Accuracy plateaued around 0.73
+after step 150 while the margin kept growing, which suggests the later steps mostly sharpened pairs that were already
+ranked correctly.
 
 \section{DPO versus SFT Results}
 
@@ -164,8 +168,8 @@ The HH prompt adds the safety criteria from the assignment and the provided per-
 \toprule
 Comparison & Pairs & DPO & SFT & Ties & Unknown & Failed & Win rate & Ties as $\frac12$ \\
 \midrule
-HH DPO vs SFT, HH set (safety mode) & 300 & 139 & 90 & 66 & 5 & 0 & 0.607 & 0.583 \\
-UF DPO vs SFT, AlpacaEval 300 & 300 & \multicolumn{7}{c}{\pending{judge results}} \\
+HH DPO vs SFT, HH set (safety) & 300 & 139 & 90 & 66 & 5 & 0 & 0.607 & 0.583 \\
+UF DPO vs SFT, AlpacaEval (general) & 300 & 114 & 141 & 45 & 0 & 0 & 0.447 & 0.455 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -186,8 +190,13 @@ hate or harassment & 15 & 9 & 6 & legal and financial safety & 10 & 15 & 4 \\
 \end{tabular}
 \end{center}
 
-\subsection{UltraFeedback}
-\pending{results table and short analysis}
+\subsection{UltraFeedback on AlpacaEval}
+
+UF DPO lost to SFT, 114 to 141 with 45 ties. Its answers are much longer (191 vs 138 words on average; 17 vs 13 of 300
+hit the 512-token limit). DPO was the longer answer in 222 of the 255 decided pairs and won 98 of those (44\%), so the
+judge did not reward length. Grouping the judge's one-sentence reasons by keyword (a rough count, not a classifier),
+62 of the 141 SFT wins cite hallucinated or incorrect content in the DPO answer, against 33 of the 114 DPO wins citing
+the same problem in the SFT answer.
 
 \subsection{Persona LoRA-DPO (separate evaluation)}
 
@@ -209,6 +218,14 @@ v5 & 5e-5 & 0.1 & + SFT & 1.00 / 1.98 & 9-0-31 & 11-18-11 & 4-5-31 \\
 \end{tabular}
 \end{center}
 
+\begin{figure}[h]
+\centering
+\includegraphics[width=\linewidth]{figures/persona_curves.png}
+\caption{Persona LoRA-DPO training for v1 (blue), v5 (orange), and v6 (green); 20 held-out pairs evaluated every 5
+steps (dashed). The v5 and v6 losses include the SFT term, so their level is not comparable with v1's pure DPO loss.
+All three reach 100\% held-out accuracy by step 10; only the margins differ.}
+\end{figure}
+
 We submit v6: it is judged more in persona on 22 of 40 prompts (9 of 10 coding prompts) while helpfulness (17 vs 18) and
 safety (4 vs 5) stay close to the untuned model. Answers also became shorter (70 words on average, 11 of 40 hitting the
 token limit, against 130 words and 16 for the base model).
@@ -228,7 +245,22 @@ regression is visible in text: DPO's supportive message becomes awkward (``how m
 our lives''). With validation accuracy still rising at the last step, longer training or a larger $\beta$ sweep would be
 the next experiments; we did not run them.
 
-\textbf{UF.} \pending{measured result, examples where DPO improves and regresses, interpretation}
+\textbf{UF: measured.} Stronger preference learning (accuracy 0.74, margin 0.67) produced generations the judge
+liked less (win rate 0.447). DPO answers are 38\% longer and more elaborate, and the judge's reasons for preferring SFT
+are mostly factual errors.
+
+\textbf{UF: examples.} Asked for actors who started on Broadway, SFT lists ten names; DPO adds a biography to each and
+gets details wrong (it gives Jack Lemmon's birth year as 1935, not 1925), and the judge flagged invented roles. Asked to
+reply to customer reviews, DPO invents a review about a ``Succotash Omelet'' that is not in the prompt. DPO wins where
+SFT degenerates: for ``cool music from the 1920s'' SFT repeats ``The Sound of Silence'' ten times, and DPO's longer
+list, while still inaccurate, avoids the loop.
+
+\textbf{UF: interpretation.} UltraFeedback's chosen responses are long, detailed answers written mostly by much larger
+models. DPO moves the 0.5B policy toward that style, but the policy does not gain the knowledge to fill it, so more
+specific claims mean more wrong claims. This is a preference-data and capacity mismatch rather than an optimization
+failure: the held-out reward metrics improved steadily. A length-controlled comparison, a lower $\beta$ or earlier
+checkpoint, or adding an SFT term on chosen responses (which helped in the persona task) would be the next things to
+test; we did not run them.
 
 \textbf{Persona.} Every variant reached 100\% held-out reward accuracy, yet only some changed what the model says. v1
 (LR 5e-5, plain DPO) over-optimised: repetition loops (``You're a mess!'' repeated to the token limit), a factual
@@ -244,15 +276,17 @@ has little safety knowledge to protect, and greedy decoding amplifies loops.
 \section{Limitations and Reproducibility}
 
 \begin{itemize}
-\item \textbf{Judge bias.} One judge model. On HH it chose Response A 134 times and B 95 times. Order was randomised
-(DPO was A in 151 pairs), and DPO won from both positions (82 to 38 as A, 57 to 52 as B), but the margin is smaller as B.
-Shorter answers won more decided pairs (129 vs 98), so a long-answer bias did not favour either model.
+\item \textbf{Judge bias.} One judge model, with a clear preference for Response A (HH: 134 A vs 95 B; UF: 150 vs
+105). Order was randomised and balanced (DPO was A in 151 of 300 pairs in both comparisons), so the bias cancels in the
+totals, but it is large: on UF, DPO went 69 to 60 as A and 45 to 81 as B. Shorter answers won more decided pairs in both
+comparisons (HH 129 vs 98, UF 139 vs 114), so a long-answer bias did not drive either result.
 \item \textbf{Scale.} One seed per run, 300 prompts per DPO comparison, 40 persona prompts, 20 held-out persona pairs. We
 report counts, not confidence intervals.
 \item \textbf{Our own persona set.} The 40 persona prompts were written for this report, not provided.
 \item \textbf{Failed runs.} The first UF run crashed (OOM) at step 50 and was rerun from step 0 with the fixes above. The
 first HH notebook crashed after training and generation in a summary cell; its outputs were complete and are used here.
-\item \textbf{Compute.} Kaggle T4 x2, total GPU time \pending{hours}.
+\item \textbf{Compute.} Kaggle T4 x2; 5.1 GPU hours of quota for all runs, including the failed UF attempt and the
+persona sweep.
 \end{itemize}
 
 \textbf{Reproduce.} \texttt{python scripts/prepare\_data.py}, then push the notebooks in \texttt{kaggle/} in order
