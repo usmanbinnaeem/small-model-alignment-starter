@@ -289,18 +289,47 @@ print("SFT best checkpoint:", SFT_BEST)
 """
 
 
-def build_dpo(folder: str, slug: str, title: str, run: str, config: str, blurb: str) -> None:
+DPO_EVAL_GEN = r"""
+# Task 6 on Kaggle: once training has finished, the DPO best and SFT best checkpoints answer this
+# run's fixed evaluation set (one model per GPU, identical decoding), then the blind pair file is built.
+import json
+summary = json.load(open("outputs/RUN/summary.json"))
+assert not summary["stopped_early"], "training hit the time limit: push again with --resume to finish it first"
+FLAGS = "DECODING_FLAGS"
+os.makedirs("outputs/gen_eval", exist_ok=True)
+jobs = {"0": ("RUN", "outputs/RUN/best"), "1": ("sft", SFT_BEST)}
+procs = [subprocess.Popen(
+            f"python -u scripts/generate.py --model {path} --generator qwen2.5-0.5b-{name} "
+            f"--eval_set eval_sets/EVALSET.json --out outputs/gen_eval/EVALSET__{name}.json {FLAGS}",
+            shell=True, env={**os.environ, "CUDA_VISIBLE_DEVICES": gpu, "PYTHONPATH": "."},
+            stdout=open(f"outputs/gen_eval/gen_{name}.log", "a"), stderr=subprocess.STDOUT)
+         for gpu, (name, path) in jobs.items()]
+print("exit codes", [p.wait() for p in procs])
+!tail -n 2 outputs/gen_eval/gen_RUN.log outputs/gen_eval/gen_sft.log
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/EVALSET__sft.json --a_name sft \\
+    --b outputs/gen_eval/EVALSET__RUN.json --b_name RUN --out outputs/gen_eval/pairs_EVALSET__RUN_vs_sft.jsonl
+for f in sorted(glob.glob("outputs/gen_eval/EVALSET__*.json")):
+    rows = json.load(open(f))
+    n_len = sum(r["finish_reason"] == "length" for r in rows)
+    print(f"{os.path.basename(f):45s} rows={len(rows)} hit_max_tokens={n_len} mean_words={sum(len(r['output'].split()) for r in rows) / len(rows):.0f}")
+"""
+
+
+def build_dpo(folder: str, slug: str, title: str, run: str, config: str, evalset: str, blurb: str) -> None:
+    flags = f"--batch_size 32 --max_new_tokens {DECODING['max_new_tokens']} --repetition_penalty {DECODING['repetition_penalty']}"
     cells = [
         md(f"""
 # PA2 stage {folder[:2]}: {title} (Task 4)
 
 {blurb} From-scratch DPO (`scripts/train_dpo.py`): policy on `cuda:0`, frozen reference on
 `cuda:1`, both from the SFT `best` checkpoint. Resumes from `outputs/{run}/resume` when a
-previous run's output is attached.
+previous run's output is attached. After training, the DPO and SFT best checkpoints answer
+`eval_sets/{evalset}.json` with identical greedy decoding (`{flags}`) and the blind pair file
+for DPO-vs-SFT judging is written to `outputs/gen_eval/`.
 """),
         *setup_cells(),
         code(FIND_SFT),
-        restore_cell([run]),
+        restore_cell([run, "gen_eval"]),
         code(f"""
 !mkdir -p outputs/{run}
 !PYTHONPATH=. python -u scripts/train_dpo.py --config {config} --sft_checkpoint {{SFT_BEST}} 2>&1 | tee -a outputs/{run}/train.log
@@ -309,8 +338,9 @@ previous run's output is attached.
 !PYTHONPATH=. python scripts/plot_metrics.py outputs/{run}
 !cat outputs/{run}/summary.json
 """),
+        code(DPO_EVAL_GEN.replace("RUN", run).replace("EVALSET", evalset).replace("DECODING_FLAGS", flags)),
         code(f"""
-!cd outputs && zip -qr /kaggle/working/{run}_run_outputs.zip {run} -x "{run}/best/*" "{run}/final/*" "{run}/resume/*"
+!cd outputs && zip -qr /kaggle/working/{run}_run_outputs.zip {run} gen_eval -x "{run}/best/*" "{run}/final/*" "{run}/resume/*"
 !du -sh outputs/{run}/* /kaggle/working/{run}_run_outputs.zip
 """),
     ]
@@ -393,9 +423,9 @@ if __name__ == "__main__":
     ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
     RESUME.update(ap.parse_args().resume)
     build_sft()
-    build_dpo("02_dpo_hh", "pa2-02-dpo-hh", "DPO HH-RLHF", "dpo_hh", "configs/dpo_hh.yaml",
+    build_dpo("02_dpo_hh", "pa2-02-dpo-hh", "DPO HH-RLHF", "dpo_hh", "configs/dpo_hh.yaml", "hh_rlhf_eval_300_seed42",
               "15k single-turn Anthropic HH-RLHF pairs (helpful/harmless), validated on 1k held-out pairs.")
-    build_dpo("03_dpo_uf", "pa2-03-dpo-uf", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml",
+    build_dpo("03_dpo_uf", "pa2-03-dpo-uf", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml", "alpaca_eval_300_seed42",
               "15k UltraFeedback-binarized pairs (general helpfulness), validated on 1k held-out pairs.")
     build_lora()
     build_generate()
