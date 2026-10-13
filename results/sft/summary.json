@@ -1,0 +1,7 @@
+{
+  "best_step": 938,
+  "best_val_loss": 1.3163440619103426,
+  "final_step": 938,
+  "total_steps": 938,
+  "stopped_early": false
+}

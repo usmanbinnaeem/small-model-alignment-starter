@@ -1,0 +1,47 @@
+[
+ {
+  "id": "alpaca-eval-42-0000",
+  "instruction": "What are the names of some famous actors that started their careers on Broadway?",
+  "output": "1. Marlon Brando\n2. Marlon Brando\n3. Marlon Brando\n4. Marlon Brando\n5. Marlon Brando\n6. Marlon Brando\n7. Marlon Brando\n8. Marlon Brando\n9. Marlon Brando\n10. Marlon Brando",
+  "generator": "sft-sanity",
+  "dataset": "alpaca_eval",
+  "finish_reason": "stop",
+  "source": "helpful_base"
+ },
+ {
+  "id": "alpaca-eval-42-0001",
+  "instruction": "Hi, my sister and her girlfriends want me to play kickball with them. Can you explain how the game is played, so they don't take advantage of me?",
+  "output": "Sure, here's how the game is played:\n\n1. Divide the group into two teams of two players each.\n\n2. The team with the ball goes first.\n\n3. The ball is passed from one player to another until one of the teams has the ball.\n\n4. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n5. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n6. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n7. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n8. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n9. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n10. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n11. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n12. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n13. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n14. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n15. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n16. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n17. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n18. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n19. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n20. The team with the ball must pass the ball to the other team's player until they have the ball.\n\n21. The team with the ball must pass the ball back to the other team's player until they have the ball.\n\n22. The team with the ball must pass the ball to the other team's player until they have the ball.",
+  "generator": "sft-sanity",
+  "dataset": "alpaca_eval",
+  "finish_reason": "length",
+  "source": "helpful_base"
+ },
+ {
+  "id": "alpaca-eval-42-0002",
+  "instruction": "What is some cool music from the 1920s?",
+  "output": "1. \"The Sound of Silence\" by The Beatles\n2. \"The Sound of Silence\" by The Beatles\n3. \"The Sound of Silence\" by The Beatles\n4. \"The Sound of Silence\" by The Beatles\n5. \"The Sound of Silence\" by The Beatles\n6. \"The Sound of Silence\" by The Beatles\n7. \"The Sound of Silence\" by The Beatles\n8. \"The Sound of Silence\" by The Beatles\n9. \"The Sound of Silence\" by The Beatles\n10. \"The Sound of Silence\" by The Beatles",
+  "generator": "sft-sanity",
+  "dataset": "alpaca_eval",
+  "finish_reason": "stop",
+  "source": "helpful_base"
+ },
+ {
+  "id": "alpaca-eval-42-0003",
+  "instruction": "Hi, I'm trying to solve a crossword puzzle, but I've never done one of these before. Can you help me out?",
+  "output": "Sure, I'd be happy to help you out. Please provide me with the crossword puzzle you're working on, and I'll do my best to assist you.",
+  "generator": "sft-sanity",
+  "dataset": "alpaca_eval",
+  "finish_reason": "stop",
+  "source": "helpful_base"
+ },
+ {
+  "id": "alpaca-eval-42-0004",
+  "instruction": "Who is Larry Page?",
+  "output": "Larry Page is the founder of Google and the CEO of the company.",
+  "generator": "sft-sanity",
+  "dataset": "alpaca_eval",
+  "finish_reason": "stop",
+  "source": "helpful_base"
+ }
+]

@@ -1,0 +1,81 @@
+{
+  "initial_eval": {
+    "eval_loss": 4.565554618835449,
+    "eval_model_preparation_time": 0.0193,
+    "eval_runtime": 2.5969,
+    "eval_samples_per_second": 7.702,
+    "eval_steps_per_second": 1.925,
+    "eval_entropy": 2.2449341773986817,
+    "eval_num_tokens": 0.0,
+    "eval_logits/chosen": 0.6137897182294221,
+    "eval_logits/rejected": 0.05598683065173391,
+    "eval_mean_token_accuracy": 0.31674585342407224,
+    "eval_rewards/chosen": 0.0,
+    "eval_rewards/rejected": 0.0,
+    "eval_rewards/accuracies": 0.0,
+    "eval_rewards/margins": 0.0,
+    "eval_logps/chosen": -174.70794982910155,
+    "eval_logps/rejected": -125.65526580810547
+  },
+  "final_eval": {
+    "eval_loss": 2.9897592067718506,
+    "eval_model_preparation_time": 0.0193,
+    "eval_runtime": 1.1596,
+    "eval_samples_per_second": 17.247,
+    "eval_steps_per_second": 4.312,
+    "eval_entropy": 2.6653090000152586,
+    "eval_num_tokens": 115893.0,
+    "eval_logits/chosen": 0.8975683670730816,
+    "eval_logits/rejected": 0.6500248194370291,
+    "eval_mean_token_accuracy": 0.42731541991233823,
+    "eval_rewards/chosen": 19.945266342163087,
+    "eval_rewards/rejected": 7.096564102172851,
+    "eval_rewards/accuracies": 1.0,
+    "eval_rewards/margins": 12.848702239990235,
+    "eval_logps/chosen": -134.81741333007812,
+    "eval_logps/rejected": -111.4621368408203,
+    "epoch": 3.0
+  },
+  "train_pairs": 200,
+  "eval_pairs": 20,
+  "optimizer_steps": 75,
+  "trainable_params": 8683520,
+  "config": {
+    "model": "HuggingFaceTB/SmolLM2-360M-Instruct",
+    "data_path": "data/persona_lora/ramsay_style_preferences.json",
+    "out_dir": "outputs/lora_dpo_v6",
+    "n_eval": 20,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "lr": 0.0001,
+    "beta": 0.5,
+    "loss_type": [
+      "sigmoid",
+      "sft"
+    ],
+    "loss_weights": [
+      1.0,
+      1.0
+    ],
+    "batch_size": 4,
+    "grad_accum": 2,
+    "epochs": 3,
+    "warmup_ratio": 0.1,
+    "max_length": 256,
+    "eval_steps": 5,
+    "fp16": true,
+    "seed": 42,
+    "max_train": null,
+    "config_file": "configs/lora_dpo_v6.yaml"
+  }
+}

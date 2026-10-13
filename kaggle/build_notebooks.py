@@ -318,7 +318,7 @@ previous run's output is attached.
 
 
 # One decoding policy for every model in a comparison (set from the stage-01 baseline evidence).
-DECODING = {"max_new_tokens": 512, "repetition_penalty": 1.0}
+DECODING = {"max_new_tokens": 512, "repetition_penalty": 1.1}
 
 FIND_EVAL_CKPTS = """
 import json

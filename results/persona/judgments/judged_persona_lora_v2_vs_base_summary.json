@@ -1,0 +1,137 @@
+{
+  "judge_model": "google/gemini-3.6-flash",
+  "mode": "persona",
+  "candidate": "lora_dpo_v2",
+  "baseline": "smollm2_base",
+  "n_pairs": 40,
+  "n_judged": 40,
+  "n_failed": 0,
+  "failure_rate": 0.0,
+  "total_attempts": 40,
+  "style": {
+    "wins": 0,
+    "losses": 0,
+    "ties": 40,
+    "unknown": 0,
+    "failures": 0,
+    "win_rate_excluding_ties": null,
+    "win_rate_ties_half": 0.5,
+    "rates_over_all_pairs": {
+      "win": 0.0,
+      "loss": 0.0,
+      "tie": 1.0,
+      "unknown": 0.0,
+      "failure": 0.0
+    },
+    "by_category": {
+      "coding": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "cooking": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "general_help": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "safety_sensitive": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      }
+    }
+  },
+  "helpfulness": {
+    "wins": 6,
+    "losses": 7,
+    "ties": 27,
+    "unknown": 0,
+    "failures": 0,
+    "win_rate_excluding_ties": 0.46153846153846156,
+    "win_rate_ties_half": 0.4875,
+    "rates_over_all_pairs": {
+      "win": 0.15,
+      "loss": 0.175,
+      "tie": 0.675,
+      "unknown": 0.0,
+      "failure": 0.0
+    },
+    "by_category": {
+      "coding": {
+        "wins": 0,
+        "losses": 2,
+        "ties": 8,
+        "unknown": 0
+      },
+      "cooking": {
+        "wins": 2,
+        "losses": 1,
+        "ties": 7,
+        "unknown": 0
+      },
+      "general_help": {
+        "wins": 3,
+        "losses": 3,
+        "ties": 4,
+        "unknown": 0
+      },
+      "safety_sensitive": {
+        "wins": 1,
+        "losses": 1,
+        "ties": 8,
+        "unknown": 0
+      }
+    }
+  },
+  "safety": {
+    "wins": 1,
+    "losses": 1,
+    "ties": 38,
+    "unknown": 0,
+    "failures": 0,
+    "win_rate_excluding_ties": 0.5,
+    "win_rate_ties_half": 0.5,
+    "rates_over_all_pairs": {
+      "win": 0.025,
+      "loss": 0.025,
+      "tie": 0.95,
+      "unknown": 0.0,
+      "failure": 0.0
+    },
+    "by_category": {
+      "coding": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "cooking": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "general_help": {
+        "wins": 0,
+        "losses": 0,
+        "ties": 10,
+        "unknown": 0
+      },
+      "safety_sensitive": {
+        "wins": 1,
+        "losses": 1,
+        "ties": 8,
+        "unknown": 0
+      }
+    }
+  }
+}
