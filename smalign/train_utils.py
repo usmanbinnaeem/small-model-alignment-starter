@@ -140,6 +140,16 @@ def save_resume(out_dir: str | Path, model, optimizer, scheduler, scaler, state:
     tmp.rename(final)
 
 
+def update_resume_state(out_dir: str | Path, state: dict) -> None:
+    """Refresh the bookkeeping of the current resume save (e.g. best-checkpoint stats after an eval)."""
+
+    path = Path(out_dir) / RESUME_DIR / _STATE_FILE
+    if path.exists():
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state, indent=2))
+        os.replace(tmp, path)
+
+
 def find_resume(out_dir: str | Path) -> Path | None:
     """The newest complete resume save under ``out_dir``, if any."""
 

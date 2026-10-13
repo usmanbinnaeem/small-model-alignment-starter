@@ -40,6 +40,7 @@ from smalign.train_utils import (
     save_resume,
     set_seed,
     trim_metrics,
+    update_resume_state,
     warmup_cosine,
 )
 
@@ -204,11 +205,15 @@ def main() -> None:
                       f"lr {scheduler.get_last_lr()[0]:.2e} gnorm {float(grad_norm):.2f}", flush=True)
                 window_loss, window_micro, window_tokens, t0 = 0.0, 0, 0, time.time()
 
+            # Save progress before evaluating, so a failure during eval cannot lose training steps.
+            out_of_time = deadline is not None and time.time() > deadline and step != total_steps
+            should_save = (step % cfg["save_every"] == 0 or out_of_time) and step != total_steps
+            if should_save:
+                checkpoint_progress()
             if step % cfg["eval_every"] == 0 or step == total_steps:
                 run_eval(step)
-            out_of_time = deadline is not None and time.time() > deadline and step != total_steps
-            if (step % cfg["save_every"] == 0 or out_of_time) and step != total_steps:
-                checkpoint_progress()
+                if should_save:
+                    update_resume_state(out, {"pos": pos, "best": best})
             if out_of_time:
                 print("time limit reached; rerun to continue from the saved step")
                 stopped_early = True

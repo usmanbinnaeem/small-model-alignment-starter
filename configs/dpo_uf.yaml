@@ -7,7 +7,7 @@ max_length: 512
 max_prompt_length: 256
 batch_size: 1
 grad_accum: 32          # effective batch 32
-eval_batch_size: 4
+eval_batch_size: 1       # UF answers are long: 4 pairs of 152k-vocab logits OOMed next to optimizer state at step 50
 lr: 1.0e-6              # fixed, no decay
 optimizer: adamw
 weight_decay: 0.0

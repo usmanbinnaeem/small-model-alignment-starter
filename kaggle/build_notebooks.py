@@ -87,6 +87,9 @@ for i in range(torch.cuda.device_count()):
 assert torch.cuda.device_count() == 2, "Expected GPU T4 x2"
 '''),
         code('''
+# Let PyTorch grow memory segments instead of fragmenting (inherited by every ! and subprocess call).
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 # Link the attached prepared-data dataset to data/prepared, wherever Kaggle mounted it.
 import glob
 hits = glob.glob("/kaggle/input/**/sft_train.jsonl", recursive=True)
@@ -309,6 +312,8 @@ print("exit codes", [p.wait() for p in procs])
 !PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/EVALSET__sft.json --a_name sft \\
     --b outputs/gen_eval/EVALSET__RUN.json --b_name RUN --out outputs/gen_eval/pairs_EVALSET__RUN_vs_sft.jsonl
 for f in sorted(glob.glob("outputs/gen_eval/EVALSET__*.json")):
+    if f.endswith(".settings.json"):
+        continue
     rows = json.load(open(f))
     n_len = sum(r["finish_reason"] == "length" for r in rows)
     print(f"{os.path.basename(f):45s} rows={len(rows)} hit_max_tokens={n_len} mean_words={sum(len(r['output'].split()) for r in rows) / len(rows):.0f}")
@@ -387,6 +392,8 @@ BUILD_EVAL_PAIRS = """
 !PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/hh_rlhf_eval_300_seed42__sft.json --a_name sft \\\\
     --b outputs/gen_eval/hh_rlhf_eval_300_seed42__dpo_hh.json --b_name dpo_hh --out outputs/gen_eval/pairs_hh_dpo_hh_vs_sft.jsonl
 for f in sorted(glob.glob("outputs/gen_eval/*__*.json")):
+    if f.endswith(".settings.json"):
+        continue
     rows = json.load(open(f))
     n_len = sum(r["finish_reason"] == "length" for r in rows)
     mean_words = sum(len(r["output"].split()) for r in rows) / len(rows)

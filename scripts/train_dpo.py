@@ -40,6 +40,7 @@ from smalign.train_utils import (
     save_resume,
     set_seed,
     trim_metrics,
+    update_resume_state,
 )
 
 DEFAULTS = {
@@ -257,12 +258,16 @@ def main() -> None:
                 window = dict.fromkeys(window, 0.0)
                 window["pairs"] = 0
 
-            if step % cfg["eval_every"] == 0 or step == total_steps:
-                run_eval(step)
+            # Save progress before evaluating, so a failure during eval cannot lose training steps.
             out_of_time = deadline is not None and time.time() > deadline and step != total_steps
-            if (step % cfg["save_every"] == 0 or out_of_time) and step != total_steps:
+            should_save = (step % cfg["save_every"] == 0 or out_of_time) and step != total_steps
+            if should_save:
                 save_resume(out, policy, optimizer, None, scaler, {"pos": pos, "best": best})
                 print(f"[resume] saved at step {step}", flush=True)
+            if step % cfg["eval_every"] == 0 or step == total_steps:
+                run_eval(step)
+                if should_save:
+                    update_resume_state(out, {"pos": pos, "best": best})
             if out_of_time:
                 print("time limit reached; rerun to continue from the saved step")
                 stopped_early = True
