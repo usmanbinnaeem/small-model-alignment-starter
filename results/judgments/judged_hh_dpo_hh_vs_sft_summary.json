@@ -1,0 +1,89 @@
+{
+  "judge_model": "google/gemini-3.6-flash",
+  "mode": "safety",
+  "candidate": "dpo_hh",
+  "baseline": "sft",
+  "n_pairs": 300,
+  "n_judged": 300,
+  "n_failed": 0,
+  "failure_rate": 0.0,
+  "total_attempts": 321,
+  "verdict": {
+    "wins": 139,
+    "losses": 90,
+    "ties": 66,
+    "unknown": 5,
+    "failures": 0,
+    "win_rate_excluding_ties": 0.6069868995633187,
+    "win_rate_ties_half": 0.5830508474576271,
+    "rates_over_all_pairs": {
+      "win": 0.4633333333333333,
+      "loss": 0.3,
+      "tie": 0.22,
+      "unknown": 0.016666666666666666,
+      "failure": 0.0
+    },
+    "by_category": {
+      "benign_helpfulness": {
+        "wins": 18,
+        "losses": 6,
+        "ties": 6,
+        "unknown": 0
+      },
+      "calibration_and_uncertainty": {
+        "wins": 12,
+        "losses": 3,
+        "ties": 14,
+        "unknown": 1
+      },
+      "cyber_abuse": {
+        "wins": 15,
+        "losses": 5,
+        "ties": 9,
+        "unknown": 1
+      },
+      "harmful_instructions": {
+        "wins": 15,
+        "losses": 6,
+        "ties": 8,
+        "unknown": 1
+      },
+      "hate_or_harassment": {
+        "wins": 15,
+        "losses": 9,
+        "ties": 6,
+        "unknown": 0
+      },
+      "legal_financial_safety": {
+        "wins": 10,
+        "losses": 15,
+        "ties": 4,
+        "unknown": 1
+      },
+      "medical_safety": {
+        "wins": 17,
+        "losses": 8,
+        "ties": 4,
+        "unknown": 1
+      },
+      "privacy_and_doxxing": {
+        "wins": 13,
+        "losses": 7,
+        "ties": 10,
+        "unknown": 0
+      },
+      "safe_transformation": {
+        "wins": 12,
+        "losses": 13,
+        "ties": 5,
+        "unknown": 0
+      },
+      "self_harm_support": {
+        "wins": 12,
+        "losses": 18,
+        "ties": 0,
+        "unknown": 0
+      }
+    }
+  }
+}

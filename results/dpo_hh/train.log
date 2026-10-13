@@ -1,0 +1,159 @@
+The tokenizer you are loading from '/kaggle/input/notebooks/usmanbinnaeem/pa2-01-sft/small-model-alignment-starter/outputs/sft/best' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+`torch_dtype` is deprecated! Use `dtype` instead!
+{
+  "sft_checkpoint": "/kaggle/input/notebooks/usmanbinnaeem/pa2-01-sft/small-model-alignment-starter/outputs/sft/best",
+  "train_path": "data/prepared/hh_train.jsonl",
+  "val_path": "data/prepared/hh_val.jsonl",
+  "out_dir": "outputs/dpo_hh",
+  "max_length": 512,
+  "max_prompt_length": 256,
+  "batch_size": 1,
+  "grad_accum": 32,
+  "eval_batch_size": 4,
+  "lr": 1e-06,
+  "optimizer": "adamw",
+  "weight_decay": 0.0,
+  "beta": 0.1,
+  "max_grad_norm": 1.0,
+  "epochs": 1,
+  "eval_every": 50,
+  "save_every": 50,
+  "log_every": 5,
+  "fp16": true,
+  "reference_dtype": "float32",
+  "seed": 42,
+  "max_train": null,
+  "max_val": null,
+  "time_limit_hours": 10.5,
+  "keep_resume": false,
+  "config_file": "configs/dpo_hh.yaml",
+  "n_train": 15000,
+  "n_val": 1000,
+  "optimizer_steps": 469,
+  "effective_batch_size": 32,
+  "policy_device": "cuda:0",
+  "reference_device": "cuda:1",
+  "torch": "2.11.0+cu128"
+}
+[eval] step 0/469 loss 0.6931 acc 0.000 margin 0.0000
+step 5/469 loss 0.6904 acc 0.331 margin 0.0058 gnorm 51.36
+step 10/469 loss 0.6881 acc 0.512 margin 0.0119 gnorm 41.25
+step 15/469 loss 0.6769 acc 0.588 margin 0.0380 gnorm 43.41
+step 20/469 loss 0.6618 acc 0.656 margin 0.0745 gnorm 40.11
+step 25/469 loss 0.6987 acc 0.512 margin 0.0076 gnorm 40.17
+step 30/469 loss 0.6636 acc 0.613 margin 0.0796 gnorm inf
+step 35/469 loss 0.6854 acc 0.556 margin 0.0385 gnorm 41.53
+step 40/469 loss 0.6846 acc 0.575 margin 0.0471 gnorm 37.56
+step 45/469 loss 0.6516 acc 0.613 margin 0.1121 gnorm 47.40
+step 50/469 loss 0.6822 acc 0.512 margin 0.0520 gnorm 40.39
+[eval] step 50/469 loss 0.6682 acc 0.586 margin 0.0824 *best*
+[resume] saved at step 50
+step 55/469 loss 0.6718 acc 0.556 margin 0.0765 gnorm 45.55
+step 60/469 loss 0.7011 acc 0.544 margin 0.0186 gnorm 42.23
+step 65/469 loss 0.6414 acc 0.669 margin 0.1562 gnorm 38.87
+step 70/469 loss 0.6359 acc 0.656 margin 0.1597 gnorm 39.14
+step 75/469 loss 0.6610 acc 0.594 margin 0.1229 gnorm 38.21
+step 80/469 loss 0.6446 acc 0.650 margin 0.1517 gnorm 35.32
+step 85/469 loss 0.6465 acc 0.631 margin 0.1362 gnorm 39.11
+step 90/469 loss 0.6540 acc 0.631 margin 0.1368 gnorm 44.27
+step 95/469 loss 0.6572 acc 0.606 margin 0.1257 gnorm 47.21
+step 100/469 loss 0.6442 acc 0.619 margin 0.1832 gnorm 42.01
+[eval] step 100/469 loss 0.6588 acc 0.607 margin 0.1345 *best*
+[resume] saved at step 100
+step 105/469 loss 0.7021 acc 0.531 margin 0.0422 gnorm 43.59
+step 110/469 loss 0.6630 acc 0.606 margin 0.1301 gnorm 43.03
+step 115/469 loss 0.6666 acc 0.631 margin 0.1053 gnorm 44.01
+step 120/469 loss 0.6518 acc 0.575 margin 0.1602 gnorm 37.74
+step 125/469 loss 0.6437 acc 0.656 margin 0.1588 gnorm 33.63
+step 130/469 loss 0.6625 acc 0.619 margin 0.1238 gnorm 40.09
+step 135/469 loss 0.6352 acc 0.631 margin 0.1690 gnorm 36.66
+step 140/469 loss 0.6468 acc 0.631 margin 0.1646 gnorm 41.90
+step 145/469 loss 0.6841 acc 0.581 margin 0.1068 gnorm 48.54
+step 150/469 loss 0.6517 acc 0.644 margin 0.1804 gnorm 36.42
+[eval] step 150/469 loss 0.6595 acc 0.604 margin 0.1423
+[resume] saved at step 150
+step 155/469 loss 0.6878 acc 0.581 margin 0.0784 gnorm 40.62
+step 160/469 loss 0.6380 acc 0.644 margin 0.1895 gnorm inf
+step 165/469 loss 0.6711 acc 0.575 margin 0.1124 gnorm 45.43
+step 170/469 loss 0.6603 acc 0.594 margin 0.1220 gnorm 39.93
+step 175/469 loss 0.6931 acc 0.562 margin 0.0565 gnorm 52.03
+step 180/469 loss 0.6562 acc 0.625 margin 0.1304 gnorm 44.41
+step 185/469 loss 0.6784 acc 0.562 margin 0.0999 gnorm 43.73
+step 190/469 loss 0.6510 acc 0.613 margin 0.1410 gnorm 42.29
+step 195/469 loss 0.6522 acc 0.619 margin 0.1527 gnorm 44.38
+step 200/469 loss 0.6556 acc 0.644 margin 0.1484 gnorm 51.99
+[eval] step 200/469 loss 0.6541 acc 0.598 margin 0.1486
+[resume] saved at step 200
+step 205/469 loss 0.6678 acc 0.606 margin 0.1287 gnorm 45.27
+step 210/469 loss 0.6350 acc 0.619 margin 0.2159 gnorm 40.69
+step 215/469 loss 0.7058 acc 0.512 margin 0.0411 gnorm 48.91
+step 220/469 loss 0.6610 acc 0.637 margin 0.1382 gnorm 40.42
+step 225/469 loss 0.6157 acc 0.637 margin 0.2385 gnorm 37.80
+step 230/469 loss 0.6510 acc 0.625 margin 0.1518 gnorm 40.18
+step 235/469 loss 0.6833 acc 0.581 margin 0.0690 gnorm 47.06
+step 240/469 loss 0.6547 acc 0.575 margin 0.1363 gnorm 38.25
+step 245/469 loss 0.6612 acc 0.594 margin 0.1374 gnorm 39.74
+step 250/469 loss 0.6288 acc 0.688 margin 0.2283 gnorm 40.12
+[eval] step 250/469 loss 0.6455 acc 0.610 margin 0.1737 *best*
+[resume] saved at step 250
+step 255/469 loss 0.6353 acc 0.650 margin 0.1898 gnorm 44.04
+step 260/469 loss 0.6547 acc 0.581 margin 0.1537 gnorm 39.32
+step 265/469 loss 0.6653 acc 0.619 margin 0.1402 gnorm 37.98
+step 270/469 loss 0.6284 acc 0.644 margin 0.2021 gnorm 38.89
+step 275/469 loss 0.6257 acc 0.675 margin 0.2320 gnorm 45.98
+step 280/469 loss 0.6524 acc 0.619 margin 0.1971 gnorm 40.03
+step 285/469 loss 0.6196 acc 0.662 margin 0.2629 gnorm 39.72
+step 290/469 loss 0.6365 acc 0.613 margin 0.2011 gnorm 38.53
+step 295/469 loss 0.6590 acc 0.594 margin 0.1835 gnorm 43.09
+step 300/469 loss 0.6273 acc 0.619 margin 0.2296 gnorm 40.30
+[eval] step 300/469 loss 0.6466 acc 0.620 margin 0.1970 *best*
+[resume] saved at step 300
+step 305/469 loss 0.6569 acc 0.588 margin 0.1603 gnorm 38.78
+step 310/469 loss 0.6585 acc 0.600 margin 0.1656 gnorm 39.02
+step 315/469 loss 0.6471 acc 0.662 margin 0.2126 gnorm 43.93
+step 320/469 loss 0.6534 acc 0.644 margin 0.1799 gnorm 45.33
+step 325/469 loss 0.6829 acc 0.556 margin 0.1091 gnorm 43.84
+step 330/469 loss 0.6410 acc 0.669 margin 0.2244 gnorm 39.73
+step 335/469 loss 0.6288 acc 0.662 margin 0.2194 gnorm 36.04
+step 340/469 loss 0.6251 acc 0.619 margin 0.2500 gnorm 41.49
+step 345/469 loss 0.5931 acc 0.738 margin 0.3089 gnorm 43.79
+step 350/469 loss 0.6822 acc 0.556 margin 0.1358 gnorm 45.41
+[eval] step 350/469 loss 0.6425 acc 0.618 margin 0.2079
+[resume] saved at step 350
+step 355/469 loss 0.6265 acc 0.619 margin 0.2463 gnorm 49.68
+step 360/469 loss 0.6057 acc 0.669 margin 0.2845 gnorm 44.82
+step 365/469 loss 0.6547 acc 0.625 margin 0.2135 gnorm 42.09
+step 370/469 loss 0.5966 acc 0.681 margin 0.3038 gnorm 43.83
+step 375/469 loss 0.6484 acc 0.613 margin 0.2345 gnorm 50.45
+step 380/469 loss 0.6170 acc 0.656 margin 0.2769 gnorm 48.75
+step 385/469 loss 0.6506 acc 0.613 margin 0.2307 gnorm 36.69
+step 390/469 loss 0.6088 acc 0.650 margin 0.3101 gnorm 42.87
+step 395/469 loss 0.6748 acc 0.631 margin 0.1937 gnorm 39.73
+step 400/469 loss 0.6559 acc 0.606 margin 0.1983 gnorm 44.34
+[eval] step 400/469 loss 0.6371 acc 0.626 margin 0.2353 *best*
+[resume] saved at step 400
+step 405/469 loss 0.6897 acc 0.556 margin 0.1454 gnorm 45.38
+step 410/469 loss 0.6543 acc 0.588 margin 0.1996 gnorm 46.67
+step 415/469 loss 0.6574 acc 0.613 margin 0.2136 gnorm 51.22
+step 420/469 loss 0.6644 acc 0.531 margin 0.1683 gnorm 45.76
+step 425/469 loss 0.6331 acc 0.613 margin 0.2275 gnorm 44.73
+step 430/469 loss 0.6395 acc 0.637 margin 0.2199 gnorm 50.27
+step 435/469 loss 0.6638 acc 0.569 margin 0.1635 gnorm 40.41
+step 440/469 loss 0.6875 acc 0.575 margin 0.1611 gnorm 42.80
+step 445/469 loss 0.6600 acc 0.637 margin 0.1720 gnorm 38.82
+step 450/469 loss 0.6515 acc 0.619 margin 0.1992 gnorm 48.59
+[eval] step 450/469 loss 0.6348 acc 0.635 margin 0.2228 *best*
+[resume] saved at step 450
+step 455/469 loss 0.6673 acc 0.588 margin 0.1792 gnorm 44.80
+step 460/469 loss 0.6511 acc 0.619 margin 0.2045 gnorm 44.08
+step 465/469 loss 0.6105 acc 0.675 margin 0.2809 gnorm 41.23
+step 469/469 loss 0.6362 acc 0.592 margin 0.2176 gnorm 39.18
+[eval] step 469/469 loss 0.6320 acc 0.644 margin 0.2223 *best*
+{
+  "best_step": 469,
+  "best_val_reward_acc": 0.644,
+  "best_val_reward_margin": 0.2222717188447714,
+  "final_step": 469,
+  "total_steps": 469,
+  "stopped_early": false
+}

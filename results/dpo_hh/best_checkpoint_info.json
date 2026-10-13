@@ -1,0 +1,10 @@
+{
+  "step": 469,
+  "reference": "/kaggle/input/notebooks/usmanbinnaeem/pa2-01-sft/small-model-alignment-starter/outputs/sft/best",
+  "val_loss": 0.6320080422163009,
+  "val_reward_acc": 0.644,
+  "val_reward_margin": 0.2222717188447714,
+  "val_chosen_reward": -0.3524652016460896,
+  "val_rejected_reward": -0.5747369196414948,
+  "val_pairs": 1000
+}
