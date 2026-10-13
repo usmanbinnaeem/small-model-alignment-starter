@@ -206,6 +206,8 @@ LORA_VARIANTS = [
     ("lora_dpo_v2", "configs/lora_dpo_v2.yaml", "smollm2_lora_dpo_v2"),
     ("lora_dpo_v3", "configs/lora_dpo_v3.yaml", "smollm2_lora_dpo_v3"),
     ("lora_dpo_v4", "configs/lora_dpo_v4.yaml", "smollm2_lora_dpo_v4"),
+    ("lora_dpo_v5", "configs/lora_dpo_v5.yaml", "smollm2_lora_dpo_v5"),
+    ("lora_dpo_v6", "configs/lora_dpo_v6.yaml", "smollm2_lora_dpo_v6"),
 ]
 
 PERSONA_RUNS = r"""
@@ -262,7 +264,7 @@ def build_lora() -> None:
 `HuggingFaceTB/SmolLM2-360M-Instruct` + LoRA trained with TRL `DPOTrainer` on
 `data/persona_lora/ramsay_style_preferences.json` (200 train / 20 held out). v1 is the first
 configuration (over-optimised); v2-v4 lower the learning rate, add an SFT term on the chosen
-response, and raise beta. Every variant and the untuned model answer the fixed 40-prompt
+response, and raise beta (too weak to change generations); v5-v6 restore update strength with the SFT anchor. Every variant and the untuned model answer the fixed 40-prompt
 persona style set with identical greedy decoding.
 """),
         *setup_cells(extra_pip='"peft==0.21.2" "trl==1.15.0"'),
