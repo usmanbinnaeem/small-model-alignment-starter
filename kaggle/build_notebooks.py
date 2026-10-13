@@ -309,7 +309,7 @@ procs = [subprocess.Popen(
          for gpu, (name, path) in jobs.items()]
 print("exit codes", [p.wait() for p in procs])
 !tail -n 2 outputs/gen_eval/gen_RUN.log outputs/gen_eval/gen_sft.log
-!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/EVALSET__sft.json --a_name sft \\
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/EVALSET__sft.json --a_name sft \
     --b outputs/gen_eval/EVALSET__RUN.json --b_name RUN --out outputs/gen_eval/pairs_EVALSET__RUN_vs_sft.jsonl
 for f in sorted(glob.glob("outputs/gen_eval/EVALSET__*.json")):
     if f.endswith(".settings.json"):
@@ -387,9 +387,9 @@ print("exit codes", [p.wait() for p in procs])
 """
 
 BUILD_EVAL_PAIRS = """
-!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/alpaca_eval_300_seed42__sft.json --a_name sft \\\\
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/alpaca_eval_300_seed42__sft.json --a_name sft \\
     --b outputs/gen_eval/alpaca_eval_300_seed42__dpo_uf.json --b_name dpo_uf --out outputs/gen_eval/pairs_alpaca_dpo_uf_vs_sft.jsonl
-!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/hh_rlhf_eval_300_seed42__sft.json --a_name sft \\\\
+!PYTHONPATH=. python scripts/build_pairs.py --a outputs/gen_eval/hh_rlhf_eval_300_seed42__sft.json --a_name sft \\
     --b outputs/gen_eval/hh_rlhf_eval_300_seed42__dpo_hh.json --b_name dpo_hh --out outputs/gen_eval/pairs_hh_dpo_hh_vs_sft.jsonl
 for f in sorted(glob.glob("outputs/gen_eval/*__*.json")):
     if f.endswith(".settings.json"):
