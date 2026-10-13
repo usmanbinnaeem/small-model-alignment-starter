@@ -20,3 +20,7 @@ checkpoints/
 kaggle.json
 access_token
 data/prepared/
+report/*.aux
+report/*.log
+report/*.out
+report/page-*.png
