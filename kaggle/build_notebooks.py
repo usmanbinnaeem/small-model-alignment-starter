@@ -415,7 +415,7 @@ every model: greedy, `{flags}`. Generation resumes per row; pair files are writt
 """),
     ]
     write_stage("05_generate", "pa2-05-generate", "PA2 05 Generate", cells,
-                kernel_sources=[f"{OWNER}/pa2-01-sft", f"{OWNER}/pa2-02-dpo-hh", f"{OWNER}/pa2-03-dpo-uf"])
+                kernel_sources=[f"{OWNER}/pa2-01-sft", f"{OWNER}/pa2-02-dpo-hh-rlhf", f"{OWNER}/pa2-03-dpo-ultrafeedback"])
 
 
 if __name__ == "__main__":
@@ -423,9 +423,9 @@ if __name__ == "__main__":
     ap.add_argument("--resume", action="append", default=[], help="stage folder(s) to rebuild with their own output attached")
     RESUME.update(ap.parse_args().resume)
     build_sft()
-    build_dpo("02_dpo_hh", "pa2-02-dpo-hh", "DPO HH-RLHF", "dpo_hh", "configs/dpo_hh.yaml", "hh_rlhf_eval_300_seed42",
+    build_dpo("02_dpo_hh", "pa2-02-dpo-hh-rlhf", "DPO HH-RLHF", "dpo_hh", "configs/dpo_hh.yaml", "hh_rlhf_eval_300_seed42",
               "15k single-turn Anthropic HH-RLHF pairs (helpful/harmless), validated on 1k held-out pairs.")
-    build_dpo("03_dpo_uf", "pa2-03-dpo-uf", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml", "alpaca_eval_300_seed42",
+    build_dpo("03_dpo_uf", "pa2-03-dpo-ultrafeedback", "DPO UltraFeedback", "dpo_uf", "configs/dpo_uf.yaml", "alpaca_eval_300_seed42",
               "15k UltraFeedback-binarized pairs (general helpfulness), validated on 1k held-out pairs.")
     build_lora()
     build_generate()

@@ -14,8 +14,8 @@
   "competition_sources": [],
   "kernel_sources": [
     "usmanbinnaeem/pa2-01-sft",
-    "usmanbinnaeem/pa2-02-dpo-hh",
-    "usmanbinnaeem/pa2-03-dpo-uf"
+    "usmanbinnaeem/pa2-02-dpo-hh-rlhf",
+    "usmanbinnaeem/pa2-03-dpo-ultrafeedback"
   ],
   "model_sources": []
 }
